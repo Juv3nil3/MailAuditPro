@@ -38,7 +38,9 @@ public class PdfParsingServiceImpl implements PdfParserService {
             throws PdfParsingException {
 
         PdfContent pdfContent = new PdfContent();
-        try (PDDocument document = PDDocument.load(pdfBytes)) {
+        String password = "password";
+        try {
+            PDDocument document = PDDocument.load(pdfBytes, password);
             // Extract text from the PDF
             PDFTextStripper textStripper = new PDFTextStripper();
             String pdfText = textStripper.getText(document);
