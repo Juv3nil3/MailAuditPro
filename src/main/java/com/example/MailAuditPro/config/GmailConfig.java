@@ -24,7 +24,7 @@ import java.util.Collections;
 @Configuration
 public class GmailConfig {
 
-    public static final JsonFactory JSON_FACTORY = GsonFactory.getDefaultInstance();
+    private JsonFactory JSON_FACTORY = GsonFactory.getDefaultInstance();
 
     @Value("${gmail.applicationName}")
     private String applicationName;
@@ -38,35 +38,49 @@ public class GmailConfig {
     @Value("${gmail.userId}")
     private String userId;
 
+    private JsonFactory JSON_FACTORY() {
+        return GsonFactory.getDefaultInstance();
+    }
+
     @Bean
     public Gmail gmail() throws Exception {
-        // initialize the Gmail API client
-        final NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
-        Credential credentials = getCredentials(HTTP_TRANSPORT);
-        Gmail service = new Gmail.Builder(HTTP_TRANSPORT, JSON_FACTORY, credentials)
-                .setApplicationName(applicationName)
-                .build();
-        return service;
+        try{
+            // initialize the Gmail API client
+            final NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
+            Credential credentials = getCredentials(HTTP_TRANSPORT);
+            Gmail service = new Gmail.Builder(HTTP_TRANSPORT, JSON_FACTORY, credentials)
+                    .setApplicationName(applicationName)
+                    .build();
+            return service;
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw e;
+        }
     }
 
     private Credential getCredentials(final NetHttpTransport HTTP_TRANSPORT) throws IOException {
-        // load client secrets from the provided gmail-credentials.json file
-        InputStream in = getClass().getResourceAsStream(credentialsFilePath);
-        if (in == null) {
-            throw new IOException("Resource not found: " + credentialsFilePath);
+        try{
+            // load client secrets from the provided gmail-credentials.json file
+            InputStream in = getClass().getResourceAsStream(credentialsFilePath);
+            if (in == null) {
+                throw new IOException("Resource not found: " + credentialsFilePath);
+            }
+            GoogleClientSecrets clientSecrets = GoogleClientSecrets.load(JSON_FACTORY, new InputStreamReader(in));
+
+            // set up the OAuth 2.0 flow for Gmail API access
+            GoogleAuthorizationCodeFlow flow = new GoogleAuthorizationCodeFlow.Builder(
+                    HTTP_TRANSPORT, JSON_FACTORY, clientSecrets, Collections.singletonList(GmailScopes.GMAIL_READONLY))
+                    .setDataStoreFactory(new FileDataStoreFactory(new java.io.File(tokensDirectoryPath)))
+                    .setAccessType("offline")
+                    .build();
+            LocalServerReceiver receiver = new LocalServerReceiver.Builder().setPort(8888).build();
+
+            // authorize the application for the specified user
+            return new AuthorizationCodeInstalledApp(flow, receiver).authorize(userId);
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw  e;
         }
-        GoogleClientSecrets clientSecrets = GoogleClientSecrets.load(JSON_FACTORY, new InputStreamReader(in));
-
-        // set up the OAuth 2.0 flow for Gmail API access
-        GoogleAuthorizationCodeFlow flow = new GoogleAuthorizationCodeFlow.Builder(
-                HTTP_TRANSPORT, JSON_FACTORY, clientSecrets, Collections.singletonList(GmailScopes.GMAIL_READONLY))
-                .setDataStoreFactory(new FileDataStoreFactory(new java.io.File(tokensDirectoryPath)))
-                .setAccessType("offline")
-                .build();
-        LocalServerReceiver receiver = new LocalServerReceiver.Builder().setPort(8888).build();
-
-        // authorize the application for the specified user
-        return new AuthorizationCodeInstalledApp(flow, receiver).authorize(userId);
     }
 
 }
