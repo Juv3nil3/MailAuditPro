@@ -7,6 +7,7 @@ import com.example.MailAuditPro.model.PdfContent;
 import com.example.MailAuditPro.model.PdfImage;
 import com.example.MailAuditPro.repository.PdfRepository;
 import com.google.api.services.gmail.model.Message;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
@@ -24,9 +25,17 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.zip.DeflaterOutputStream;
 
 @Service
+@Slf4j
 public class PdfParsingServiceImpl implements PdfParserService {
+
+    private final PDFTextStripper textStripper;
+
+    public PdfParsingServiceImpl(PDFTextStripper textStripper) {
+        this.textStripper = textStripper;
+    }
     @Autowired
     private GmailService gmailService;
 
@@ -62,23 +71,28 @@ public class PdfParsingServiceImpl implements PdfParserService {
                         BufferedImage bufferedImage = image.getImage();
 
                         // Convert the buffered image to a byte array
-                        try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
-                            ImageIO.write(bufferedImage, "PNG", baos);
-                            byte[] imageContent = baos.toByteArray();
+                        try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                             DeflaterOutputStream dos = new DeflaterOutputStream(baos)) {
+                            // Convert BufferedImage to PNG format
+                            ImageIO.write(bufferedImage, "PNG", dos);
+                            dos.finish();
+                            byte[] compressedImageContent = baos.toByteArray();
+                            System.out.println(compressedImageContent.length);
 
                             // Save the PdfImage entity to the repository
                             PdfImage pdfImage = new PdfImage();
                             pdfImage.setMessageId(messageId);
                             pdfImage.setAttachmentId(attachmentId);
                             pdfImage.setImageIndex(imageIndex);
-                            pdfImage.setImageContent(imageContent);
+                            pdfImage.setImageContent(compressedImageContent);
+
 
                             // Add PdfImage to PdfContent
                             pdfContent.addPdfImage(pdfImage);
 
                             imageIndex++;
                         } catch (IOException e) {
-                            // Handle exception when writing image to byte array
+                            // Handle exception when compressing or writing compressed image to byte array
                             e.printStackTrace();
                         }
                     }
@@ -98,11 +112,12 @@ public class PdfParsingServiceImpl implements PdfParserService {
 
 
 
-    @Scheduled(fixedRate = 6000)
+    @Scheduled(fixedDelay = 60000)
     @Override
     public void extractPdfContentsFromAttachments() throws MessageNotFoundException, GmailServiceFetchException, PdfParsingException {
+        log.info("Scheduled task started: extractPdfContentsFromAttachments");
 
-        List<Message> messages = gmailService.fetchMessagesBySubject("Bank Statement");
+        List<Message> messages = gmailService.fetchMessagesBySubject("Bank Account Statement");
 
         // Iterate through the fetched messages
         for (Message message : messages) {
