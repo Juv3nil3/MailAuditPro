@@ -21,7 +21,7 @@ public class PdfContent {
     @Column(name = "message_id")
     private String messageId;
 
-    @Column(name = "text_content")
+    @Column(name = "text_content", columnDefinition = "LONGTEXT")
     private String textContent;
 
     @OneToMany(mappedBy = "pdfContent", cascade = CascadeType.ALL, orphanRemoval = true)

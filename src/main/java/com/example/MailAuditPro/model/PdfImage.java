@@ -22,14 +22,14 @@ public class PdfImage {
     @Column(name = "message_id")
     private String messageId;
 
-    @Column(name = "attachment_id")
+    @Column(name = "attachment_id", columnDefinition = "LONGTEXT")
     private String attachmentId;
 
     @Column(name = "image_index")
     private int imageIndex;
 
     @Lob
-    @Column(name = "image_content", columnDefinition = "BLOB")
+    @Column(name = "image_content", columnDefinition = "LONGBLOB")
     private byte[] imageContent;
 
 }
