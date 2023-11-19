@@ -77,7 +77,7 @@ public class PdfParsingServiceImpl implements PdfParserService {
                             ImageIO.write(bufferedImage, "PNG", dos);
                             dos.finish();
                             byte[] compressedImageContent = baos.toByteArray();
-                            System.out.println(compressedImageContent.length);
+
 
                             // Save the PdfImage entity to the repository
                             PdfImage pdfImage = new PdfImage();
@@ -117,7 +117,7 @@ public class PdfParsingServiceImpl implements PdfParserService {
     public void extractPdfContentsFromAttachments() throws MessageNotFoundException, GmailServiceFetchException, PdfParsingException {
         log.info("Scheduled task started: extractPdfContentsFromAttachments");
 
-        List<Message> messages = gmailService.fetchMessagesBySubject("Bank Account Statement");
+        List<Message> messages = gmailService.fetchMessagesBySubject("Test Run");
 
         // Iterate through the fetched messages
         for (Message message : messages) {

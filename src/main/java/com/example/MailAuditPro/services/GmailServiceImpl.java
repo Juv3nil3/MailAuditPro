@@ -2,6 +2,7 @@ package com.example.MailAuditPro.services;
 
 import com.example.MailAuditPro.exceptions.GmailServiceFetchException;
 import com.example.MailAuditPro.exceptions.MessageNotFoundException;
+import com.google.api.client.json.webtoken.JsonWebToken;
 import com.google.api.services.gmail.Gmail;
 import com.google.api.services.gmail.model.Message;
 import com.google.api.services.gmail.model.MessagePart;
@@ -11,6 +12,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.text.SimpleDateFormat;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -125,10 +127,16 @@ public class GmailServiceImpl implements GmailService{
      * @return a list of message parts representing attachments
      */
     private List<MessagePart> extractAttachmentPartsFromMessage(Message message) {
-        return message.getPayload().getParts()
-                .stream()
-                .filter(this::isAttachment)
-                .collect(Collectors.toList());
+        MessagePart payload = message.getPayload();
+        if (payload != null) {
+            List<MessagePart> parts = payload.getParts();
+            if (parts != null) {
+                return parts.stream()
+                        .filter(this::isAttachment)
+                        .collect(Collectors.toList());
+            }
+        }
+        return Collections.emptyList(); // or null, depending on your preference
     }
 
     /**
