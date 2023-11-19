@@ -8,10 +8,12 @@ import org.apache.pdfbox.pdmodel.encryption.InvalidPasswordException;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -20,9 +22,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 
+@ExtendWith(MockitoExtension.class)
 class PdfParsingServiceImplTest {
 
     @Mock
@@ -32,7 +35,6 @@ class PdfParsingServiceImplTest {
     private PdfRepository pdfRepository;
 
     @InjectMocks
-    @Spy
     private PdfParsingServiceImpl pdfParsingService;
 
     @BeforeEach
@@ -44,30 +46,25 @@ class PdfParsingServiceImplTest {
     void extractPdfContentFromAttachment_Success() throws PdfParsingException, IOException {
         // Arrange
 
-        Path pdfPath = Path.of("src/main/resources/RedHat Certified.pdf");
+        // Give the path of the local pdf to test the function
+        Path pdfPath = Path.of("src/main/resources/14120372-XXXXXXX-226016.pdf");
         byte[] pdfBytes = Files.readAllBytes(pdfPath);
         String messageId = "123";
         String attachmentId = "attachment1";
 
+        // Mock PDFTextStripper
+        PDFTextStripper textStripperMock = mock(PDFTextStripper.class);
 
-        try (InputStream inputStream = new ByteArrayInputStream(pdfBytes);
-             PDDocument documentMock = PDDocument.load(inputStream)) {
-            //System.out.println(password);
-            PDFTextStripper textStripperMock = mock(PDFTextStripper.class);
-            when(textStripperMock.getText(documentMock)).thenReturn("Arunima");
+        // Act
+        PdfContent result = pdfParsingService.extractPdfContentFromAttachment(pdfBytes, messageId, attachmentId);
 
-            // Act
-            PdfContent result = pdfParsingService.extractPdfContentFromAttachment(pdfBytes, messageId, attachmentId);
+        // Assert
+        assertNotNull(result);
+        assertTrue(result.getTextContent().contains("JAI NAGAR"), "Actual text content: " + result.getTextContent());
+        assertEquals(2, result.getPdfImages().size()); //There are 2 images in the pdf
 
-            // Assert
-            assertNotNull(result);
-            assertTrue(result.getTextContent().contains("Arunima"));
-            assertEquals(4, result.getPdfImages().size()); // Assuming there is one image
-        } catch (InvalidPasswordException e) {
-            // Handle the case where the password is incorrect
-            fail("Incorrect password provided during PDF decryption.");
-        }
+        // Verify that save method was called on the PdfRepository
+        verify(pdfRepository, times(1)).save(any(PdfContent.class));
     }
-
 
 }
