@@ -29,6 +29,6 @@ public interface PdfParserService {
      * @throws GmailServiceFetchException
      * @throws PdfParsingException
      */
-    void extractPdfContentsFromAttachments() throws MessageNotFoundException, GmailServiceFetchException, PdfParsingException;
+    List<String> extractPdfContentsFromAttachments(List<Message> messages) throws MessageNotFoundException, GmailServiceFetchException, PdfParsingException;
 
 }

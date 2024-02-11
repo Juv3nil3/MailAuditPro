@@ -47,7 +47,7 @@ class PdfParsingServiceImplTest {
         // Arrange
 
         // Give the path of the local pdf to test the function
-        Path pdfPath = Path.of("src/main/resources/14120372-XXXXXXX-226016.pdf");
+        Path pdfPath = Path.of("src/main/resources/RedHat Certified.pdf");
         byte[] pdfBytes = Files.readAllBytes(pdfPath);
         String messageId = "123";
         String attachmentId = "attachment1";
@@ -60,8 +60,8 @@ class PdfParsingServiceImplTest {
 
         // Assert
         assertNotNull(result);
-        assertTrue(result.getTextContent().contains("JAI NAGAR"), "Actual text content: " + result.getTextContent());
-        assertEquals(2, result.getPdfImages().size()); //There are 2 images in the pdf
+        assertTrue(result.getTextContent().contains("Red Hat"), "Actual text content: " + result.getTextContent());
+        assertEquals(4, result.getPdfImages().size()); //There are 2 images in the pdf
 
         // Verify that save method was called on the PdfRepository
         verify(pdfRepository, times(1)).save(any(PdfContent.class));

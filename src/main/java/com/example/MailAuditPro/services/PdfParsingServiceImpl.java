@@ -16,7 +16,7 @@ import org.apache.pdfbox.pdmodel.PDResources;
 import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import javax.imageio.ImageIO;
@@ -33,6 +33,9 @@ public class PdfParsingServiceImpl implements PdfParserService {
 
     private final PDFTextStripper textStripper;
 
+    //Give the password if your pdf is encrypted
+    @Value("${pdf.password}")
+    private String password;
     public PdfParsingServiceImpl(PDFTextStripper textStripper) {
         this.textStripper = textStripper;
     }
@@ -47,7 +50,7 @@ public class PdfParsingServiceImpl implements PdfParserService {
             throws PdfParsingException {
 
         PdfContent pdfContent = new PdfContent();
-        String password = "password";
+
         try {
             PDDocument document = PDDocument.load(pdfBytes, password);
             // Extract text from the PDF
@@ -111,13 +114,11 @@ public class PdfParsingServiceImpl implements PdfParserService {
     }
 
 
-
-    @Scheduled(fixedDelay = 60000)
     @Override
-    public void extractPdfContentsFromAttachments() throws MessageNotFoundException, GmailServiceFetchException, PdfParsingException {
-        log.info("Scheduled task started: extractPdfContentsFromAttachments");
+    public List<String> extractPdfContentsFromAttachments(List<Message> messages)
+            throws MessageNotFoundException, GmailServiceFetchException, PdfParsingException {
 
-        List<Message> messages = gmailService.fetchMessagesBySubject("Test Run");
+        List<String> responses = new ArrayList<>();
 
         // Iterate through the fetched messages
         for (Message message : messages) {
@@ -128,19 +129,32 @@ public class PdfParsingServiceImpl implements PdfParserService {
                 // Process each attachment
                 for (String attachmentId : attachmentIds) {
                     if (attachmentId != null) {
-                        byte[] pdfBytes = gmailService.fetchPdfAttachment(message.getId(), attachmentId);
+                        try {
+                            // Fetch PDF attachment
+                            byte[] pdfBytes = gmailService.fetchPdfAttachment(message.getId(), attachmentId);
 
-                        // Extract and save pdfContent
-                        PdfContent pdfContent = extractPdfContentFromAttachment(pdfBytes, message.getId(), attachmentId);
+                            // Extract and save pdfContent
+                            PdfContent pdfContent = extractPdfContentFromAttachment(pdfBytes, message.getId(), attachmentId);
 
-                        // Set message id for tracking
-                        pdfContent.setMessageId(message.getId());
+                            // Set message id for tracking
+                            pdfContent.setMessageId(message.getId());
 
-                        // Save the pdfContent to the repository
-                        pdfRepository.save(pdfContent);
+                            // Save the pdfContent to the repository
+                            pdfRepository.save(pdfContent);
+
+                            // Add the extracted pdfContent to the list
+                            responses.add(pdfContent.getTextContent());
+                        } catch (Exception e) {
+                            // Handle exception when fetching or processing PDF attachment fails
+                            // Log or throw a specific exception based on your error handling strategy
+                            // For example, you might want to log the error and continue processing other attachments
+                            e.printStackTrace(); // Log or handle the exception appropriately
+                        }
                     }
                 }
             }
         }
+        return responses;
     }
+
 }
